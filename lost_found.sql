@@ -2,8 +2,7 @@
 --- DATABASE INFORMATION
 --- =====================================
 ---
---- author: Franck Davy
---- release: v1.0
+--- author: uglydavy
 --- date: 2021/9/11
 --- title: Lost & Found System
 --- description: DBMS Project Course
