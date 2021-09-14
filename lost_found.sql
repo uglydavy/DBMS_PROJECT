@@ -33,7 +33,7 @@ DROP DATABASE IF EXISTS lost_found_sys;         --- Delete database lost_found_s
 CREATE DATABASE lost_found_sys;
 ---
 CREATE TABLE lost_found_sys.groups (
-                                       group_id grp PRIMARY KEY DEFAULT uuid_generate_v4(),
+                                       group_id grp PRIMARY KEY,
                                        group_name title NOT NULL,
                                        center_name cntr_name DEFAULT NULL,
                                        description describe NOT NULL,
@@ -47,19 +47,19 @@ CREATE TABLE lost_found_sys.groups (
 --- =====================================
 CREATE TABLE lost_found_sys.centers (
                                         center_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-                                        name cntr_name NOT NULL,
+                                        center_name cntr_name NOT NULL,
                                         contacts TEXT [] NOT NULL,
                                         address addr NOT NULL,
                                         working_hours VARCHAR(10) NOT NULL
 );
 --- =====================================
 CREATE TABLE lost_found_sys.users (
-                                      user_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+                                      user_id uuid PRIMARY KEY,
                                       group_id grp NOT NULL,
                                       username VARCHAR(50) NOT NULL,
                                       password VARCHAR(512) NOT NULL,
                                       email VARCHAR(20),
-                                      contact TEXT
+                                      contact TEXT DEFAULT NULL
 );
 --- =====================================
 CREATE TABLE lost_found_sys.logs (
@@ -70,18 +70,23 @@ CREATE TABLE lost_found_sys.logs (
                                      time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 --- =====================================
+CREATE TABLE lost_found_sys.categories (
+                                           category_id uuid PRIMARY KEY,
+                                           category ctgry NOT NULL
+);
+--- =====================================
 CREATE TABLE lost_found_sys.posts (
-                                      post_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+                                      post_id uuid PRIMARY KEY,
                                       user_id uuid NOT NULL,
                                       category_id uuid NOT NULL,
-                                      title VARCHAR(30),
+                                      title VARCHAR(30) DEFAULT NULL,
                                       description VARCHAR(512) NOT NULL,
                                       category VARCHAR(100) NOT NULL,
                                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 --- =====================================
 CREATE TABLE lost_found_sys.items (
-                                      item_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+                                      item_id uuid PRIMARY KEY,
                                       user_id uuid NOT NULL,
                                       status numeric(1) DEFAULT 0
 );
@@ -89,13 +94,8 @@ CREATE TABLE lost_found_sys.items (
 CREATE TABLE lost_found_sys.lost_found (
                                            item_id uuid NOT NULL,
                                            user_id uuid NOT NULL,
-                                           type_desc TEXT NOT NULL,
+                                           type_desc i_type NOT NULL,
                                            item_location VARCHAR(100) NOT NULL
-);
---- =====================================
-CREATE TABLE lost_found_sys.categories (
-                                           category_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-                                           category VARCHAR(30) NOT NULL
 );
 --- =====================================
 CREATE TABLE lost_found_sys.imgs (
@@ -123,8 +123,10 @@ CREATE TYPE grp AS ENUM ('grp_001@admin', 'grp_002@cent', 'grp_003@stu');       
 CREATE TYPE cntr AS ENUM ('001@north', '002@south', '003@lib', '004@card', '005@union', '006@A', '007@B', '008@C', '009@D', '010@E');                               --- Center's ID
 CREATE TYPE cntr_name AS ENUM ('ZHOU', 'CAINIAO', 'BOGR', 'FAUNA', 'ARIES', 'THEMOLD', 'REDBLUESEED', 'ARCHIPELAGO', 'BABAVOSS', 'WAVER');                          --- Center's name
 CREATE TYPE title AS ENUM ('admin', 'student', 'center');                                                                                                           --- User's group
+CREATE TYPE ctgry AS ENUM ('category1', 'category2', 'category3', 'category4', 'category5', 'category6');                                                           --- Categories
 CREATE TYPE describe AS ENUM ('manages the entire system', 'can only post lost or found stuff', 'manages his center only');                                         --- Group description
 CREATE TYPE addr AS ENUM ('North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area');    --- center address
+CREATE TYPE i_type AS ENUM ('lost', 'found');                                                                                                                       --- Item lost or found
 ---
 --- =====================================
 --- SET TABLES CONSTRAINTS
@@ -226,7 +228,7 @@ GRANT USAGE ON SCHEMA public TO sys_admin;                                  --- 
 GRANT USAGE ON SCHEMA lost_found_sys TO sys_admin;                          --- Granting usage permission on database with schema "lost_found_sys" to system administrator
 GRANT CREATE ON SCHEMA lost_found_sys TO sys_admin;                         --- Granting select, insert, update, truncate, drop, alter, etc.. to system administrator
 GRANT OPTION TO sys_admin;                                                  --- Granting permission to create or remove users
-
+---
 GRANT center_admin TO
     south_center,                                                         --- Granting role "center administrator" to "north_center"
     library_center,                                                       --- Granting role "center administrator" to "south_center"
@@ -261,25 +263,60 @@ ALTER TABLE center_schema.lost_found_goods OWNER TO center_admin;           --- 
 --- =====================================
 ---
 --- insert into groups table
--- CREATE TYPE addr AS ENUM ('North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area');    --- center address
-INSERT INTO lost_found_sys.groups VALUES (group_id::grp[0], group_name::title[0], description::describe[0], true, true);
-INSERT INTO lost_found_sys.groups VALUES (group_id::grp[1], group_name::title[1], description::describe[1], false, false);
-INSERT INTO lost_found_sys.groups VALUES (group_id::grp[2], group_name::title[2], description::describe[2], false, false);
+INSERT INTO lost_found_sys.groups VALUES
+                                      (group_id::grp[0], group_name::title[0], description::describe[0], true, true),
+                                      (group_id::grp[1], group_name::title[1], description::describe[1], false, false),
+                                      (group_id::grp[2], group_name::title[2], description::describe[2], false, false);
 ---
 --- insert into centers table
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[0], [ [(123)-234566], [(463)-056554] ], address::addr[0]);
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[1], [ [(456)-234566], [(403)-259994] ], address::addr[1]);
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[2], [ [(789)-234566], [(463)-457454] ], address::addr[0]);
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[3], [ [(101)-234566], [(663)-209854] ], address::addr[3]);
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[4], [ [(213)-234566], [(400)-557454] ], address::addr[4]);
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[5], [ [(141)-234566], [(473)-159054] ], address::addr[5]);
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[6], [ [(516)-234566], [(030)-859234] ], address::addr[6]);
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[7], [ [(718)-234566], [(463)-650914] ], address::addr[7]);
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[8], [ [(192)-234566], [(963)-757454] ], address::addr[8]);
-INSERT INTO lost_found_sys.centers VALUES (center_id::cntr, name::cntr_name[9], [ [(212)-234566], [(773)-911454] ], address::addr[9]);
+INSERT INTO lost_found_sys.centers VALUES
+                                       (center_id::cntr, center_name::cntr_name[0], [ [(123)-234566], [(463)-056554] ], address::addr[0]),
+                                       (center_id::cntr, center_name::cntr_name[1], [ [(456)-234566], [(403)-259994] ], address::addr[1]),
+                                       (center_id::cntr, center_name::cntr_name[2], [ [(789)-234566], [(463)-457454] ], address::addr[0]),
+                                       (center_id::cntr, center_name::cntr_name[3], [ [(101)-234566], [(663)-209854] ], address::addr[3]),
+                                       (center_id::cntr, center_name::cntr_name[4], [ [(213)-234566], [(400)-557454] ], address::addr[4]),
+                                       (center_id::cntr, center_name::cntr_name[5], [ [(141)-234566], [(473)-159054] ], address::addr[5]),
+                                       (center_id::cntr, center_name::cntr_name[6], [ [(516)-234566], [(030)-859234] ], address::addr[6]),
+                                       (center_id::cntr, center_name::cntr_name[7], [ [(718)-234566], [(463)-650914] ], address::addr[7]),
+                                       (center_id::cntr, center_name::cntr_name[8], [ [(192)-234566], [(963)-757454] ], address::addr[8]),
+                                       (center_id::cntr, center_name::cntr_name[9], [ [(212)-234566], [(773)-911454] ], address::addr[9]);
+---
+--- insert into users table
+INSERT INTO lost_found_sys.users VALUES
+                                     (group_id::grp[0], 'uglydavy', 'password1', 'uglydavy@mail.com', '(245)-65734523'),
+                                     (group_id::grp[1], 'daniel', 'password2', 'daniel@mail.com', '(185)-65723777'),
+                                     (group_id::grp[2], 'mike', 'password3', 'mike@mail.com', '(897)-61109823'),
+                                     (group_id::grp[3], 'leila', 'password4', 'leila@mail.com', '(205)-89894523'),
+                                     (group_id::grp[4], 'jonas', 'password5', 'jonas@mail.com', '(910)-88734599');
+---
+--- insert into users table
+INSERT INTO lost_found_sys.categories VALUES
+                                          (category::ctgry[0]),
+                                          (category::ctgry[1]),
+                                          (category::ctgry[2]),
+                                          (category::ctgry[3]),
+                                          (category::ctgry[4]),
+                                          (category::ctgry[5]);
 --- =====================================
 --- STORED PROCEDURES
 --- =====================================
+---
+--- usp_posts procedure
+CREATE OR REPLACE PROCEDURE lost_found_sys.usp_posts(title = NULL, description, category, type_desc, item_location)
+    LANGUAGE plpgsql
+AS $$
+DECLARE
+    post_id uuid = uuid_generate_v4();
+    user_id uuid = uuid_generate_v4();
+    item_id uuid = uuid_generate_v4();
+    category_id uuid = categories.category_id;
+BEGIN
+    INSERT INTO lost_found_sys.posts VALUES(post_id, user_id, category_id, title, description, category);
+    INSERT INTO lost_found_sys.items VALUES(item_id, user_id);
+    INSERT INTO lost_found_sys.lost_found VALUES(item_id, user_id, type_desc, item_location);
+    COMMIT;
+END;
+$$;
 ---
 --- usp_goods procedure
 CREATE OR REPLACE PROCEDURE center_schema.usp_goods()
