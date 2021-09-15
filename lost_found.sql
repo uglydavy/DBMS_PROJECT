@@ -318,7 +318,7 @@ INSERT INTO lost_found_sys.categories VALUES
 --- =====================================
 ---
 --- usp_posts procedure
-DROP PROCEDURE lost_found_sys.usp_posts;
+DROP PROCEDURE IF EXISTS lost_found_sys.usp_posts;
 CREATE OR REPLACE PROCEDURE lost_found_sys.usp_posts
 (
     usp_title varchar,                   --- Declaring variable usp_title representing (posts.title) with default value null
@@ -412,6 +412,7 @@ call lost_found_sys.usp_posts
     );
 ---
 --- usp_pickups procedure
+DROP PROCEDURE IF EXISTS lost_found_sys.usp_pickups;
 CREATE OR REPLACE PROCEDURE lost_found_sys.usp_pickups (itemID uuid, centerID uuid, pickedBY text, pickedAT addr)
     LANGUAGE plpgsql
 AS $BODY$
@@ -479,17 +480,19 @@ call lost_found_sys.usp_pickups
     );
 ---
 --- usp_goods procedure
-CREATE OR REPLACE PROCEDURE center_schema.usp_goods ()
-    LANGUAGE plpgsql
-AS $BODY$
+DROP FUNCTION IF EXISTS center_schema.usp_goods;
+CREATE OR REPLACE FUNCTION center_schema.usp_goods ()
+    RETURNS text AS $BODY$
 DECLARE
-    centers TEXT[] := ARRAY ['North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area'];
+    centers TEXT [];
     center VARCHAR := 'student';
     student VARCHAR := 'student';
     name VARCHAR;
+    result text[];
 BEGIN
+    SELECT INTO centers (ARRAY ['North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area']);
     <<loop_in>>
-    FOR name IN centers LOOP
+    FOREACH name IN ARRAY centers LOOP
             SELECT
                 u.user_id AS user_id,                --- Rename column "u.user_id" as "user_id"
                 it.item_id AS item_id,               --- Rename column "i.item_id" as "item_id"
@@ -501,6 +504,8 @@ BEGIN
                 u.contact AS contact,                --- Rename column "u.contact" as "contact"
                 it.status AS status,                 --- Rename column "it.status" as "status"
                 p.created_at AS created_at           --- Rename column "p.created_at" as "created_at"
+            INTO
+                result
             FROM
                 lost_found_sys.posts p,              --- Rename table as "p"
                 lost_found_sys.items it,             --- Rename table items as "it"
@@ -524,10 +529,10 @@ BEGIN
                         g.center_name = name                 --- Displaying relevant info based on center's location
             ORDER BY
                 p.created_at;
+            RETURN result;
         END LOOP loop_in;
 END;
-$BODY$;
-call center_schema.usp_goods();                             --- Calling stored procedure
+$BODY$ LANGUAGE plpgsql;
 ---
 ---
 --- =====================================
@@ -536,12 +541,9 @@ call center_schema.usp_goods();                             --- Calling stored p
 ---
 --- lost_found_goods view
 DROP VIEW IF EXISTS center_schema.lost_found_goods;
-CREATE VIEW center_schema.lost_found_goods              --- Create view lost_found_goods under "center_schema"
-AS SELECT
-       *
-   FROM
-       center_schema.usp_goods() AS usp_goods          --- Selecting data by calling procedure "center_schema.usp_goods()" as "usp_goods"
-        WITH CHECK OPTION;                                      --- Prevent users from updating or deleting rows not available to the view
+CREATE OR REPLACE VIEW center_schema.lost_found_goods           --- Create view lost_found_goods under "center_schema"
+AS
+select * from center_schema.usp_goods() AS usp_goods;    --- Selecting data by calling procedure "center_schema.usp_goods()" as "usp_goods"
 ---
 ---
 --- =====================================
