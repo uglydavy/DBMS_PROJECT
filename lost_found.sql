@@ -14,17 +14,55 @@
 --- SETTING UP DATABASE AND TABLES
 --- =====================================
 ---
-DROP TABLE IF EXISTS lost_found_sys.users;      --- Delete table users from lost_found_sys if it already exists
-DROP TABLE IF EXISTS lost_found_sys.groups;     --- Delete table groups from lost_found_sys if it already exists
-DROP TABLE IF EXISTS lost_found_sys.logs;       --- Delete table logs from lost_found_sys if it already exists
-DROP TABLE IF EXISTS lost_found_sys.centers;    --- Delete table centers from lost_found_sys if it already exists
-DROP TABLE IF EXISTS lost_found_sys.posts;      --- Delete table posts from lost_found_sys if it already exists
-DROP TABLE IF EXISTS lost_found_sys.items;      --- Delete table items from lost_found_sys if it already exists
-DROP TABLE IF EXISTS lost_found_sys.lost_found; --- Delete table lost_found from lost_found_sys if it already exists
-DROP TABLE IF EXISTS lost_found_sys.categories; --- Delete table categories from lost_found_sys if it already exists
-DROP TABLE IF EXISTS lost_found_sys.imgs;       --- Delete table imgs from lost_found_sys if it already exists
-DROP TABLE IF EXISTS lost_found_sys.pickups;    --- Delete table pickups from lost_found_sys if it already exists
-DROP DATABASE IF EXISTS lost_found_sys;         --- Delete database lost_found_sys if it already exists
+TRUNCATE TABLE lost_found_sys.users CASCADE;
+TRUNCATE TABLE lost_found_sys.groups CASCADE;
+TRUNCATE TABLE lost_found_sys.logs CASCADE;
+TRUNCATE TABLE lost_found_sys.centers CASCADE;
+TRUNCATE TABLE lost_found_sys.posts CASCADE;
+TRUNCATE TABLE lost_found_sys.items CASCADE;
+TRUNCATE TABLE lost_found_sys.lost_found CASCADE;
+TRUNCATE TABLE lost_found_sys.categories CASCADE;
+TRUNCATE TABLE lost_found_sys.imgs CASCADE;
+TRUNCATE TABLE lost_found_sys.pickups CASCADE;
+---
+DROP TABLE IF EXISTS lost_found_sys.users CASCADE;      --- Delete table users from lost_found_sys if it already exists
+DROP TABLE IF EXISTS lost_found_sys.groups CASCADE;     --- Delete table groups from lost_found_sys if it already exists
+DROP TABLE IF EXISTS lost_found_sys.logs CASCADE;       --- Delete table logs from lost_found_sys if it already exists
+DROP TABLE IF EXISTS lost_found_sys.centers CASCADE;    --- Delete table centers from lost_found_sys if it already exists
+DROP TABLE IF EXISTS lost_found_sys.posts CASCADE;      --- Delete table posts from lost_found_sys if it already exists
+DROP TABLE IF EXISTS lost_found_sys.items CASCADE;      --- Delete table items from lost_found_sys if it already exists
+DROP TABLE IF EXISTS lost_found_sys.lost_found CASCADE; --- Delete table lost_found from lost_found_sys if it already exists
+DROP TABLE IF EXISTS lost_found_sys.categories CASCADE; --- Delete table categories from lost_found_sys if it already exists
+DROP TABLE IF EXISTS lost_found_sys.imgs CASCADE;       --- Delete table imgs from lost_found_sys if it already exists
+DROP TABLE IF EXISTS lost_found_sys.pickups CASCADE;    --- Delete table pickups from lost_found_sys if it already exists
+DROP DATABASE IF EXISTS lost_found_sys;                 --- Delete database lost_found_sys if it already exists
+---
+--- =====================================
+--- SCHEMAS CREATION
+--- =====================================
+DROP SCHEMA IF EXISTS lost_found_sys, center_schema CASCADE;    --- Dropping existing schemas
+CREATE SCHEMA lost_found_sys;                                   --- Objects' container "lost_found_sys" for system administrator
+CREATE SCHEMA center_schema;                                    --- Objects' container "center_schema" for each center administrator
+---
+--- =====================================
+--- USER DEFINED TYPES
+--- =====================================
+---
+DROP TYPE IF EXISTS grp, cntr, cntr_name, title, ctgry, describe, addr, i_type;
+
+CREATE TYPE grp AS ENUM ('grp_001@admin', 'grp_002@cent', 'grp_003@stu');                                                                                           --- Group's ID
+CREATE TYPE cntr AS ENUM ('001@north', '002@south', '003@lib', '004@card', '005@union', '006@A', '007@B', '008@C', '009@D', '010@E');                               --- Center's ID
+CREATE TYPE cntr_name AS ENUM ('ZHOU', 'CAINIAO', 'BOGR', 'FAUNA', 'ARIES', 'THEMOLD', 'REDBLUESEED', 'ARCHIPELAGO', 'BABAVOSS', 'WAVER');                          --- Center's name
+CREATE TYPE title AS ENUM ('admin', 'student', 'center');                                                                                                           --- User's group
+CREATE TYPE ctgry AS ENUM ('category1', 'category2', 'category3', 'category4', 'category5');                                                                        --- Categories
+CREATE TYPE describe AS ENUM ('manages the entire system', 'can only post lost or found stuff', 'manages his center only');                                         --- Group description
+CREATE TYPE addr AS ENUM ('North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area');    --- center address
+CREATE TYPE i_type AS ENUM ('lost', 'found');                                                                                                                       --- Item lost or found
+---
+--- =====================================
+--- EXTENSIONS
+--- =====================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; --- Extension for adding more randomize IDs than serial type (equivalent of the AUTO_INCREMENT in MySQL)
 ---
 --- =====================================
 --- CREATING DATABASE AND TABLES
@@ -40,17 +78,17 @@ CREATE TABLE lost_found_sys.groups (
                                        allow_add BOOLEAN DEFAULT true,
                                        allow_delete BOOLEAN DEFAULT true,
                                        allow_modify BOOLEAN DEFAULT true,
-                                       allow_import BOOLEAN NOT NULL,
-                                       allow_export BOOLEAN NOT NULL,
+                                       allow_import BOOLEAN DEFAULT false,
+                                       allow_export BOOLEAN DEFAULT false,
                                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 --- =====================================
 CREATE TABLE lost_found_sys.centers (
-                                        center_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+                                        center_id uuid PRIMARY KEY,
                                         center_name cntr_name NOT NULL,
                                         contacts TEXT [] NOT NULL,
                                         address addr NOT NULL,
-                                        working_hours VARCHAR(10) NOT NULL
+                                        working_hours VARCHAR(20) NOT NULL
 );
 --- =====================================
 CREATE TABLE lost_found_sys.users (
@@ -81,7 +119,7 @@ CREATE TABLE lost_found_sys.posts (
                                       category_id uuid NOT NULL,
                                       title VARCHAR(30) DEFAULT NULL,
                                       description VARCHAR(512) NOT NULL,
-                                      category VARCHAR(100) NOT NULL,
+                                      category ctgry NOT NULL,
                                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 --- =====================================
@@ -99,7 +137,7 @@ CREATE TABLE lost_found_sys.lost_found (
 );
 --- =====================================
 CREATE TABLE lost_found_sys.imgs (
-                                     img_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+                                     img_id uuid PRIMARY KEY,
                                      item_id uuid NOT NULL,
                                      description VARCHAR(50) NOT NULL,
                                      img bytea NOT NULL,
@@ -109,96 +147,402 @@ CREATE TABLE lost_found_sys.imgs (
 CREATE TABLE lost_found_sys.pickups (
                                         id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
                                         item_id uuid NOT NULL,
-                                        center_id uuid NOT NULL,
-                                        picked_by TEXT,
-                                        pickup_at addr NOT NULL,
-                                        time TIME DEFAULT CURRENT_TIME(HH:MIN)
+                                        center_id uuid DEFAULT NULL,
+                                        picked_by TEXT DEFAULT NULL,
+                                        pickup_at addr DEFAULT NULL,
+                                        time TIME DEFAULT NULL
 );
 ---
 --- =====================================
---- USER DEFINED TYPES
+--- INDEXES (QUERY OPTIMIZATION)
 --- =====================================
 ---
-CREATE TYPE grp AS ENUM ('grp_001@admin', 'grp_002@cent', 'grp_003@stu');                                                                                           --- Group's ID
-CREATE TYPE cntr AS ENUM ('001@north', '002@south', '003@lib', '004@card', '005@union', '006@A', '007@B', '008@C', '009@D', '010@E');                               --- Center's ID
-CREATE TYPE cntr_name AS ENUM ('ZHOU', 'CAINIAO', 'BOGR', 'FAUNA', 'ARIES', 'THEMOLD', 'REDBLUESEED', 'ARCHIPELAGO', 'BABAVOSS', 'WAVER');                          --- Center's name
-CREATE TYPE title AS ENUM ('admin', 'student', 'center');                                                                                                           --- User's group
-CREATE TYPE ctgry AS ENUM ('category1', 'category2', 'category3', 'category4', 'category5', 'category6');                                                           --- Categories
-CREATE TYPE describe AS ENUM ('manages the entire system', 'can only post lost or found stuff', 'manages his center only');                                         --- Group description
-CREATE TYPE addr AS ENUM ('North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area');    --- center address
-CREATE TYPE i_type AS ENUM ('lost', 'found');                                                                                                                       --- Item lost or found
+--- indexes on groups table
+DROP INDEX IF EXISTS idx_groups_id, idx_groups_id_name;
+CREATE INDEX idx_groups_id ON lost_found_sys.groups(group_id);
+CREATE INDEX idx_groups_id_name ON lost_found_sys.groups(group_id, group_name);
+---
+--- indexes on centers table
+DROP INDEX IF EXISTS idx_centers_id, idx_centers_name;
+CREATE INDEX idx_centers_id ON lost_found_sys.centers(center_id);
+CREATE INDEX idx_centers_name ON lost_found_sys.centers(center_name);
+---
+--- indexes on users table
+DROP INDEX IF EXISTS idx_users_id, idx_users_ctid, idx_users_name;
+CREATE INDEX idx_users_id ON lost_found_sys.users(user_id);
+CREATE INDEX idx_users_ctid ON lost_found_sys.users(group_id);
+CREATE INDEX idx_users_name ON lost_found_sys.users(username);
+---
+--- indexes on logs table
+DROP INDEX IF EXISTS idx_logs_lid, idx_logs_gid, idx_logs_uid;
+CREATE INDEX idx_logs_lid ON lost_found_sys.logs(log_id);
+CREATE INDEX idx_logs_gid ON lost_found_sys.logs(group_id);
+CREATE INDEX idx_logs_uid ON lost_found_sys.logs(user_id);
+---
+--- indexes on categories table
+DROP INDEX IF EXISTS idx_categories_cat, idx_categories_catid;
+CREATE INDEX idx_categories_cat ON lost_found_sys.categories(category);
+CREATE INDEX idx_categories_catid ON lost_found_sys.categories(category_id, category);
+---
+--- indexes on items table
+DROP INDEX IF EXISTS idx_items_id, idx_items_uid, idx_items_stat, idx_items_ustat;
+CREATE INDEX idx_items_id ON lost_found_sys.items(item_id);
+CREATE INDEX idx_items_uid ON lost_found_sys.items(user_id);
+CREATE INDEX idx_items_stat ON lost_found_sys.items(status);
+CREATE INDEX idx_items_ustat ON lost_found_sys.items(user_id, status) ;
+---
+--- indexes on lost_found table
+DROP INDEX IF EXISTS idx_lost_found_id, idx_lost_found_loc;
+CREATE INDEX idx_lost_found_id ON lost_found_sys.lost_found(item_id);
+CREATE INDEX idx_lost_found_loc ON lost_found_sys.lost_found(item_location);
+---
+--- indexes on imgs table
+DROP INDEX IF EXISTS idx_imgs_id;
+CREATE INDEX idx_imgs_id ON lost_found_sys.imgs(item_id);
+---
+--- indexes on pickups table
+DROP INDEX IF EXISTS idx_pickups_id, idx_pickups_ctid, idx_pickups_by, idx_pickups_at, idx_pickups_byat;
+CREATE INDEX idx_pickups_id ON lost_found_sys.pickups(item_id);
+CREATE INDEX idx_pickups_ctid ON lost_found_sys.pickups(center_id);
+CREATE INDEX idx_pickups_by ON lost_found_sys.pickups(picked_by);
+CREATE INDEX idx_pickups_at ON lost_found_sys.pickups(pickup_at);
+CREATE INDEX idx_pickups_byat ON lost_found_sys.pickups(picked_by, pickup_at);
 ---
 --- =====================================
 --- SET TABLES CONSTRAINTS
 --- =====================================
 ---
---- groups table
-ALTER TABLE lost_found_sys.groups                                                   ---
-    ADD CONSTRAINT FK_groups FOREIGN KEY (center_name) REFERENCES centers           ---
-        ON UPDATE CASCADE                                                           ---
-        ON DELETE NO ACTION;                                              ---
+-- --- groups table
+-- ALTER TABLE lost_found_sys.groups                                                                   ---
+--     ADD CONSTRAINT FK_groups FOREIGN KEY (center_name) REFERENCES lost_found_sys.centers            ---
+--         ON UPDATE CASCADE                                                                           ---
+--                   ON DELETE NO ACTION;                                                              ---
 --- =====================================
 --- users table
-ALTER TABLE lost_found_sys.users                                                    ---
-    ADD CONSTRAINT FK_groups                                                        ---
-        FOREIGN KEY (group_id) REFERENCES groups                                    ---
+ALTER TABLE lost_found_sys.users                                                                    ---
+    ADD CONSTRAINT FK_groups                                                                        ---
+        FOREIGN KEY (group_id) REFERENCES lost_found_sys.groups                                     ---
             ON UPDATE CASCADE
-            ON DELETE CASCADE;                                                  ---
+            ON DELETE CASCADE;                                                                  ---
 --- =====================================
 --- logs table
-ALTER TABLE lost_found_sys.logs                                                     ---
-    ADD CONSTRAINT FK_users FOREIGN KEY (user_id) REFERENCES users                  ---
-        ON UPDATE CASCADE                                                           ---
-        ON DELETE NO ACTION,                                              ---
-    ADD CONSTRAINT FK_groups FOREIGN KEY (group_id) REFERENCES groups               ---
-        ON UPDATE CASCADE                                                           ---
-        ON DELETE NO ACTION;                                              ---
+ALTER TABLE lost_found_sys.logs                                                                     ---
+    ADD CONSTRAINT FK_users FOREIGN KEY (user_id) REFERENCES lost_found_sys.users                   ---
+        ON UPDATE CASCADE                                                                           ---
+        ON DELETE NO ACTION,                                                              ---
+    ADD CONSTRAINT FK_groups FOREIGN KEY (group_id) REFERENCES lost_found_sys.groups                ---
+        ON UPDATE CASCADE                                                                           ---
+        ON DELETE NO ACTION;                                                              ---
 --- =====================================
 --- posts table
-ALTER TABLE lost_found_sys.posts                                                    ---
-    ADD CONSTRAINT FK_users FOREIGN KEY (user_id) REFERENCES users                  ---
-        ON UPDATE CASCADE                                                           ---
-        ON DELETE CASCADE,                                                  ---
-    ADD CONSTRAINT FK_categories FOREIGN KEY (category_id) REFERENCES categories    ---
-        ON UPDATE CASCADE                                                           ---
-        ON DELETE CASCADE;                                                  ---
+ALTER TABLE lost_found_sys.posts                                                                    ---
+    ADD CONSTRAINT FK_users FOREIGN KEY (user_id) REFERENCES lost_found_sys.users                   ---
+        ON UPDATE CASCADE                                                                           ---
+        ON DELETE CASCADE,                                                                  ---
+    ADD CONSTRAINT FK_categories FOREIGN KEY (category_id) REFERENCES lost_found_sys.categories     ---
+        ON UPDATE CASCADE                                                                           ---
+        ON DELETE CASCADE;                                                                  ---
 --- =====================================
 --- items table
-ALTER TABLE lost_found_sys.items                                                    ---
-    ADD CONSTRAINT FK_users FOREIGN KEY (user_id) REFERENCES users                  ---
-        ON UPDATE CASCADE                                                           ---
-        ON DELETE CASCADE;                                                      ---
+ALTER TABLE lost_found_sys.items                                                                    ---
+    ADD CONSTRAINT FK_users FOREIGN KEY (user_id) REFERENCES lost_found_sys.users                   ---
+        ON UPDATE CASCADE                                                                           ---
+        ON DELETE CASCADE;                                                                      ---
 --- =====================================
 --- lost_found table
-ALTER TABLE lost_found_sys.lost_found                                               ---
-    ADD CONSTRAINT PK_lost_found PRIMARY KEY (item_id, user_id),                    ---
-    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES users                  ---
-        ON UPDATE NO ACTION                                                         ---
-        ON DELETE NO ACTION,                                                    ---
-    ADD CONSTRAINT FK_users FOREIGN KEY (user_id) REFERENCES users                  ---
-        ON UPDATE NO ACTION                                                         ---
-        ON DELETE NO ACTION;                                                    ---
+ALTER TABLE lost_found_sys.lost_found                                                               ---
+    ADD CONSTRAINT PK_lost_found PRIMARY KEY (item_id, user_id),                                    ---
+    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.users                   ---
+        ON UPDATE NO ACTION                                                                         ---
+        ON DELETE NO ACTION,                                                                    ---
+    ADD CONSTRAINT FK_users FOREIGN KEY (user_id) REFERENCES lost_found_sys.users                   ---
+        ON UPDATE NO ACTION                                                                         ---
+        ON DELETE NO ACTION;                                                                    ---
 --- =====================================
 --- imgs table
-ALTER TABLE lost_found_sys.imgs                                                     ---
-    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES items                  ---
-        ON UPDATE CASCADE                                                           ---
-        ON DELETE CASCADE;                                                      ---
+ALTER TABLE lost_found_sys.imgs                                                                     ---
+    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.items                   ---
+        ON UPDATE CASCADE                                                                           ---
+        ON DELETE CASCADE;                                                                      ---
 --- =====================================
 --- pickups table
-ALTER TABLE lost_found_sys.pickups                                                  ---
-    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES users                  ---
-        ON UPDATE NO ACTION                                                         ---
-        ON DELETE NO ACTION,                                                    ---
-    ADD CONSTRAINT FK_centers FOREIGN KEY (center_id) REFERENCES centers            ---
-        ON UPDATE NO ACTION                                                         ---
-        ON DELETE NO ACTION;                                                    ---
+ALTER TABLE lost_found_sys.pickups                                                                  ---
+    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.users                   ---
+        ON UPDATE NO ACTION                                                                         ---
+        ON DELETE NO ACTION,                                                                    ---
+    ADD CONSTRAINT FK_centers FOREIGN KEY (center_id) REFERENCES lost_found_sys.centers             ---
+        ON UPDATE NO ACTION                                                                         ---
+        ON DELETE NO ACTION;                                                                    ---
 ---
 --- =====================================
---- SCHEMAS CREATION
+--- INSERTING DATA TO TABLES
 --- =====================================
 ---
-CREATE SCHEMA center_schema;    --- Objects' container "center_schema" for each center administrator
+--- insert into groups table
+INSERT INTO lost_found_sys.groups VALUES ('grp_001@admin', 'admin', 'ARIES', 'manages the entire system', true, true);
+INSERT INTO lost_found_sys.groups VALUES ('grp_002@cent', 'center', 'ARCHIPELAGO', 'manages his center only');
+INSERT INTO lost_found_sys.groups VALUES ('grp_003@stu', 'student', NULL, 'can only post lost or found stuff');
+---
+--- insert into centers table
+INSERT INTO lost_found_sys.centers VALUES
+                                       (uuid_generate_v4(), 'ZHOU', ARRAY [ '(123)-234566], [(463)-056554]' ], 'North Campus', '8:20 AM to 4:40 PM'),
+                                       (uuid_generate_v4(), 'CAINIAO', ARRAY [ '(456)-234566], [(403)-259994]' ], 'South Campus', '8:20 AM to 4:40 PM'),
+                                       (uuid_generate_v4(), 'BOGR', ARRAY [ '(789)-234566], [(463)-457454]' ], 'Library', '8:20 AM to 4:40 PM'),
+                                       (uuid_generate_v4(), 'FAUNA', ARRAY [ '(101)-234566], [(663)-209854]' ], 'Card recharge Center', '8:20 AM to 4:40 PM'),
+                                       (uuid_generate_v4(), 'ARIES', ARRAY [ '(213)-234566], [(400)-557454]' ], 'Student Union', '8:20 AM to 4:40 PM'),
+                                       (uuid_generate_v4(), 'THEMOLD', ARRAY [ '(141)-234566], [(473)-159054]' ], 'A area', '8:20 AM to 4:40 PM'),
+                                       (uuid_generate_v4(), 'REDBLUESEED', ARRAY [ '(516)-234566], [(030)-859234]' ], 'B area', '8:20 AM to 4:40 PM'),
+                                       (uuid_generate_v4(), 'ARCHIPELAGO', ARRAY [ '(718)-234566], [(463)-650914]' ], 'C area', '8:20 AM to 4:40 PM'),
+                                       (uuid_generate_v4(), 'BABAVOSS', ARRAY [ '(192)-234566], [(963)-757454]' ], 'D area', '8:20 AM to 4:40 PM'),
+                                       (uuid_generate_v4(), 'WAVER', ARRAY [ '(212)-234566], [(773)-911454]' ], 'E area', '8:20 AM to 4:40 PM');
+---
+--- insert into users table
+INSERT INTO lost_found_sys.users VALUES
+                                     (uuid_generate_v4(), 'grp_003@stu', 'uglydavy', 'password1', 'uglydavy@mail.com', '(245)-65734523'),
+                                     (uuid_generate_v4(), 'grp_002@cent', 'daniel', 'password2', 'daniel@mail.com', '(185)-65723777'),
+                                     (uuid_generate_v4(), 'grp_002@cent', 'mike', 'password3', 'mike@mail.com', '(897)-61109823'),
+                                     (uuid_generate_v4(), 'grp_003@stu', 'leila', 'password4', 'leila@mail.com', '(205)-89894523'),
+                                     (uuid_generate_v4(), 'grp_003@stu', 'jonas', 'password5', 'jonas@mail.com', '(910)-88734599');
+---
+--- insert into users table
+INSERT INTO lost_found_sys.categories VALUES
+                                          (uuid_generate_v4(), 'category1'),
+                                          (uuid_generate_v4(), 'category2'),
+                                          (uuid_generate_v4(), 'category3'),
+                                          (uuid_generate_v4(), 'category4'),
+                                          (uuid_generate_v4(), 'category5');
+---
+---
+--- =====================================
+--- STORED PROCEDURES
+--- =====================================
+---
+--- usp_posts procedure
+DROP PROCEDURE lost_found_sys.usp_posts;
+CREATE OR REPLACE PROCEDURE lost_found_sys.usp_posts
+(
+    usp_title varchar,                   --- Declaring variable usp_title representing (posts.title) with default value null
+    usp_desc varchar,                    --- Declaring variable usp_description representing (posts.description)
+    usp_category ctgry,                  --- Declaring variable representing posts.category
+    usp_type_desc i_type,                --- Declaring variable representing posts.type_desc
+    usp_location varchar,                --- Declaring variable representing posts.item_location
+    usp_img_desc varchar,                --- Declaring variable representing imgs.description
+    usp_img bytea                        --- Declaring variable representing imgs_img
+)
+    LANGUAGE plpgsql
+AS $BODY$
+DECLARE
+    categoryID uuid;                            --- Declaring variable holding value of a certain categories.category_id
+    postID uuid = uuid_generate_v4();       --- Generating a unique ID for (posts.post_id)
+    userID uuid = uuid_generate_v4();       --- Generating a unique ID for (users.user_id)
+    itemID uuid = uuid_generate_v4();       --- Generating a unique ID for (items.item_id)
+    imgID uuid = uuid_generate_v4();        --- Generating a unique ID for (imgs.img_id)
+    pickupID uuid = uuid_generate_v4();     --- Generating a unique ID for (pickups.id)
+BEGIN
+    SELECT category_id INTO STRICT categoryID   --- Fetching unique ID of a specific category and assigning it to a variable (categoryID)
+    FROM
+        lost_found_sys.categories
+    WHERE
+            category = usp_category;              --- Only selecting row matching our category
+
+    INSERT INTO lost_found_sys.posts VALUES (postID, userID, categoryID, usp_title, usp_desc, usp_category);
+    INSERT INTO lost_found_sys.items VALUES (itemID, userID);
+    INSERT INTO lost_found_sys.lost_found VALUES (itemID, userID, usp_type_desc, usp_location);
+    INSERT INTO lost_found_sys.imgs VALUES (imgID, itemID, usp_img_desc, usp_img);
+    INSERT INTO lost_found_sys.pickups VALUES (pickupID, itemID);
+    COMMIT;
+    SAVEPOINT trans1;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+END;
+$BODY$;
+---
+---
+--- insert into posts, items, lost_found, imgs tables
+call lost_found_sys.usp_posts
+    (
+        'Lost Airpods 2',
+        'I lost my airpods yesterday around the business center.',
+        'category1',
+        'lost',
+        'Business Center',
+        'airpods with green protective case',
+        '~/Photos/img1.jpg'
+    );
+call lost_found_sys.usp_posts
+    (
+        '',
+        'I left my phone somewhere in south campus. i do not remember the exact location.',
+        'category2',
+        'lost',
+        'Business Center',
+        '',
+        '~/Photos/img2.jpg'
+    );
+call lost_found_sys.usp_posts
+    (
+        'Textbook',
+        'I found a desktop in our lab two days ago and no one has come to get it yet.',
+        'category3',
+        'found',
+        'Library',
+        'Physics Textbook',
+        '~/Photos/img3.jpg'
+    );
+call lost_found_sys.usp_posts
+    (
+        'bag',
+        'I left my bike at the canteen in E area. Please me find it',
+        'category4',
+        'lost',
+        'Business Center',
+        'little brown bag',
+        '~/Photos/img4.jpg'
+    );
+call lost_found_sys.usp_posts
+    (
+        'Lost my bike keys',
+        'forgot my keys when I went to get some papers at the front desk of the student union.',
+        'category5',
+        'lost',
+        'Student Union',
+        '',
+        '~/Photos/img5.jpg'
+    );
+---
+--- usp_pickups procedure
+CREATE OR REPLACE PROCEDURE lost_found_sys.usp_pickups (itemID uuid, centerID uuid, pickedBY text, pickedAT addr)
+    LANGUAGE plpgsql
+AS $BODY$
+DECLARE
+    ID uuid;
+    pickedTIME time := LOCALTIME(0);
+BEGIN
+    SELECT id INTO STRICT ID
+    FROM
+        lost_found_sys.pickups
+    WHERE
+            item_id = itemID;
+
+    UPDATE
+        lost_found_sys.pickups
+    SET
+        center_id = centerID,
+        picked_by = pickedBY,
+        pickup_at = pickedAT,
+        time = pickedTIME
+    WHERE
+            id = ID;
+    SAVEPOINT trans1;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+END;
+$BODY$;
+---
+---
+call lost_found_sys.usp_pickups
+    (
+        uuid_generate_v4(),
+        uuid_generate_v4(),
+        'Michael',
+        'North Campus'
+    );
+call lost_found_sys.usp_pickups
+    (
+        uuid_generate_v4(),
+        uuid_generate_v4(),
+        'Bjorn',
+        'South Campus'
+    );
+call lost_found_sys.usp_pickups
+    (
+        uuid_generate_v4(),
+        uuid_generate_v4(),
+        'Kaka',
+        'Library'
+    );
+call lost_found_sys.usp_pickups
+    (
+        uuid_generate_v4(),
+        uuid_generate_v4(),
+        'Florence',
+        'Card recharge Center'
+    );
+call lost_found_sys.usp_pickups
+    (
+        uuid_generate_v4(),
+        uuid_generate_v4(),
+        'badriri',
+        'Student Union'
+    );
+---
+--- usp_goods procedure
+CREATE OR REPLACE PROCEDURE center_schema.usp_goods ()
+    LANGUAGE plpgsql
+AS $BODY$
+DECLARE
+    centers TEXT[] := ARRAY ['North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area'];
+    center VARCHAR := 'student';
+    student VARCHAR := 'student';
+    name VARCHAR;
+BEGIN
+    <<loop_in>>
+    FOR name IN centers LOOP
+            SELECT
+                u.user_id AS user_id,                --- Rename column "u.user_id" as "user_id"
+                it.item_id AS item_id,               --- Rename column "i.item_id" as "item_id"
+                u.username AS username,              --- Rename column "u.username" as "username"
+                p.title AS post,                     --- Rename column "p.title" as "post"
+                p.description AS body,               --- Rename column "p.description" as "body"
+                c.category AS category,              --- Rename column "c.category" as "category"
+                im.img AS img,                       --- Rename column "im.img" as "img"
+                u.contact AS contact,                --- Rename column "u.contact" as "contact"
+                it.status AS status,                 --- Rename column "it.status" as "status"
+                p.created_at AS created_at           --- Rename column "p.created_at" as "created_at"
+            FROM
+                lost_found_sys.posts p,              --- Rename table as "p"
+                lost_found_sys.items it,             --- Rename table items as "it"
+                lost_found_sys.users u,              --- Rename table users as "u"
+                lost_found_sys.imgs im,              --- Rename table imgs as "im"
+                lost_found_sys.categories c,         --- Rename table categories as "c"
+                lost_found_sys.groups g              --- Rename table groups as "g"
+            WHERE
+                        c.category_id = p.category_id        --- Joining category and posts tables by "category_id"
+                    AND
+                        p.user_id = u.user_id                --- Joining posts and users tables by "user_id"
+                    AND
+                        u.user_id = it.user_id               --- Joining users and items tables by "user_id"
+                    AND
+                        it.item_id = im.item_id              --- Joining items and images tables by "item_id"
+                    AND
+                        g.group_name = center                --- Display info from user of group center
+               OR
+                        g.group_name = student               --- Display info from user of group student
+                    AND
+                        g.center_name = name                 --- Displaying relevant info based on center's location
+            ORDER BY
+                p.created_at;
+        END LOOP loop_in;
+END;
+$BODY$;
+call center_schema.usp_goods();                             --- Calling stored procedure
+---
+---
+--- =====================================
+--- ACCESSIBILITY (VIEWS)
+--- =====================================
+---
+--- lost_found_goods view
+DROP VIEW IF EXISTS center_schema.lost_found_goods;
+CREATE VIEW center_schema.lost_found_goods              --- Create view lost_found_goods under "center_schema"
+AS SELECT
+       *
+   FROM
+       center_schema.usp_goods() AS usp_goods          --- Selecting data by calling procedure "center_schema.usp_goods()" as "usp_goods"
+        WITH CHECK OPTION;                                      --- Prevent users from updating or deleting rows not available to the view
+---
 ---
 --- =====================================
 --- ROLES AND GRANTS
@@ -207,8 +551,18 @@ CREATE SCHEMA center_schema;    --- Objects' container "center_schema" for each 
 --- revoking access
 REVOKE ALL ON DATABASE lost_found_sys FROM PUBLIC;                          --- revoke access & grants from public to users
 REVOKE ALL ON SCHEMA public FROM PUBLIC;                                    --- revoke access & grants to public
+REVOKE VIEW FROM center_admin;
+REVOKE ALL ON SCHEMA center_schema FROM center_admin;
+REVOKE ALL ON DATABASE lost_found_sys FROM center_admin;
+REVOKE CONNECT ON DATABASE lost_found_sys FROM center_admin;
+REVOKE CONNECT ON DATABASE lost_found_sys FROM sys_admin;
+REVOKE ALL ON SCHEMA lost_found_sys FROM sys_admin;
+REVOKE ALL ON SCHEMA public FROM sys_admin;
+REVOKE ALL ON DATABASE lost_found_sys FROM sys_admin;
 --- =====================================
 --- users
+DROP USER IF EXISTS sys_admin, north_center, south_center, south_center, recharge_center, student_center, a_center, b_center, c_center, d_center, e_center;
+DROP ROLE IF EXISTS center_admin;
 CREATE USER sys_admin;                                                      --- Creating global role "center_admin" for each center admin
 CREATE USER north_center;                                                   --- Creating north campus center admin with username "north_center"
 CREATE USER south_center;                                                   --- Creating south campus center admin with username "south_center"
@@ -259,124 +613,3 @@ ALTER TABLE lost_found_sys.pickups OWNER TO sys_admin;                      --- 
 ALTER TABLE center_schema.lost_found_goods OWNER TO center_admin;           --- View "lost_found_goods" is owned by center administrators
 ---
 --- =====================================
---- INSERTING DATA TO TABLES
---- =====================================
----
---- insert into groups table
-INSERT INTO lost_found_sys.groups VALUES
-                                      (group_id::grp[0], group_name::title[0], description::describe[0], true, true),
-                                      (group_id::grp[1], group_name::title[1], description::describe[1], false, false),
-                                      (group_id::grp[2], group_name::title[2], description::describe[2], false, false);
----
---- insert into centers table
-INSERT INTO lost_found_sys.centers VALUES
-                                       (center_id::cntr, center_name::cntr_name[0], [ [(123)-234566], [(463)-056554] ], address::addr[0]),
-                                       (center_id::cntr, center_name::cntr_name[1], [ [(456)-234566], [(403)-259994] ], address::addr[1]),
-                                       (center_id::cntr, center_name::cntr_name[2], [ [(789)-234566], [(463)-457454] ], address::addr[0]),
-                                       (center_id::cntr, center_name::cntr_name[3], [ [(101)-234566], [(663)-209854] ], address::addr[3]),
-                                       (center_id::cntr, center_name::cntr_name[4], [ [(213)-234566], [(400)-557454] ], address::addr[4]),
-                                       (center_id::cntr, center_name::cntr_name[5], [ [(141)-234566], [(473)-159054] ], address::addr[5]),
-                                       (center_id::cntr, center_name::cntr_name[6], [ [(516)-234566], [(030)-859234] ], address::addr[6]),
-                                       (center_id::cntr, center_name::cntr_name[7], [ [(718)-234566], [(463)-650914] ], address::addr[7]),
-                                       (center_id::cntr, center_name::cntr_name[8], [ [(192)-234566], [(963)-757454] ], address::addr[8]),
-                                       (center_id::cntr, center_name::cntr_name[9], [ [(212)-234566], [(773)-911454] ], address::addr[9]);
----
---- insert into users table
-INSERT INTO lost_found_sys.users VALUES
-                                     (group_id::grp[0], 'uglydavy', 'password1', 'uglydavy@mail.com', '(245)-65734523'),
-                                     (group_id::grp[1], 'daniel', 'password2', 'daniel@mail.com', '(185)-65723777'),
-                                     (group_id::grp[2], 'mike', 'password3', 'mike@mail.com', '(897)-61109823'),
-                                     (group_id::grp[3], 'leila', 'password4', 'leila@mail.com', '(205)-89894523'),
-                                     (group_id::grp[4], 'jonas', 'password5', 'jonas@mail.com', '(910)-88734599');
----
---- insert into users table
-INSERT INTO lost_found_sys.categories VALUES
-                                          (category::ctgry[0]),
-                                          (category::ctgry[1]),
-                                          (category::ctgry[2]),
-                                          (category::ctgry[3]),
-                                          (category::ctgry[4]),
-                                          (category::ctgry[5]);
---- =====================================
---- STORED PROCEDURES
---- =====================================
----
---- usp_posts procedure
-CREATE OR REPLACE PROCEDURE lost_found_sys.usp_posts(title = NULL, description, category, type_desc, item_location)
-    LANGUAGE plpgsql
-AS $$
-DECLARE
-    post_id uuid = uuid_generate_v4();
-    user_id uuid = uuid_generate_v4();
-    item_id uuid = uuid_generate_v4();
-    category_id uuid = categories.category_id;
-BEGIN
-    INSERT INTO lost_found_sys.posts VALUES(post_id, user_id, category_id, title, description, category);
-    INSERT INTO lost_found_sys.items VALUES(item_id, user_id);
-    INSERT INTO lost_found_sys.lost_found VALUES(item_id, user_id, type_desc, item_location);
-    COMMIT;
-END;
-$$;
----
---- usp_goods procedure
-CREATE OR REPLACE PROCEDURE center_schema.usp_goods()
-    LANGUAGE plpgsql
-AS $$
-DECLARE
-    centers TEXT[] := ['North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area'];
-    center VARCHAR := 'student';
-    student VARCHAR := 'student';
-    name VARCHAR;
-BEGIN
-    FOR name IN centers LOOP
-            SELECT
-                u.user_id AS user_id,                --- Rename column "u.user_id" as "user_id"
-                it.item_id AS item_id,               --- Rename column "i.item_id" as "item_id"
-                u.username AS username,              --- Rename column "u.username" as "username"
-                p.title AS post,                     --- Rename column "p.title" as "post"
-                p.description AS body,               --- Rename column "p.description" as "body"
-                c.category AS category,              --- Rename column "c.category" as "category"
-                im.img AS img,                       --- Rename column "im.img" as "img"
-                u.contact AS contact,                --- Rename column "u.contact" as "contact"
-                it.status AS status,                 --- Rename column "it.status" as "status"
-                p.created_at AS created_at           --- Rename column "p.created_at" as "created_at"
-            FROM
-                lost_found_sys.posts p,              --- Rename table as "p"
-                lost_found_sys.items it,             --- Rename table items as "it"
-                lost_found_sys.users u,              --- Rename table users as "u"
-                lost_found_sys.imgs im,              --- Rename table imgs as "im"
-                lost_found_sys.categories c,         --- Rename table categories as "c"
-                lost_found_sys.groups g              --- Rename table groups as "g"
-            WHERE
-                        c.category_id = p.category_id        --- Joining category and posts tables by "category_id"
-                    AND
-                        p.user_id = u.user_id                --- Joining posts and users tables by "user_id"
-                    AND
-                        u.user_id = it.user_id               --- Joining users and items tables by "user_id"
-                    AND
-                        it.item_id = im.item_id              --- Joining items and images tables by "item_id"
-                    AND
-                        g.group_name = center                --- Display info from user of group center
-               OR
-                        g.group_name = student               --- Display info from user of group student
-                    AND
-                        g.center_name = name;                --- Displaying relevant info based on center's location
-        END LOOP;
-END;
-$$;
-call center_schema.usp_goods();                             --- Calling stored procedure
----
---- =====================================
---- ACCESSIBILITY (VIEWS)
---- =====================================
----
---- lost_found_goods view
-CREATE VIEW center_schema.lost_found_goods              --- Create view lost_found_goods under "center_schema"
-AS SELECT
-       *
-   FROM
-       center_schema.usp_goods() AS usp_goods          --- Selecting data by calling procedure "center_schema.usp_goods()" as "usp_goods"
-        WITH CHECK OPTION;                                      --- Prevent users from updating or deleting rows not available to the view
----
---- =====================================
----
