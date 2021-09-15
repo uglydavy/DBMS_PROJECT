@@ -83,7 +83,7 @@ CREATE DATABASE lost_found_sys;
 CREATE TABLE lost_found_sys.groups (
                                        group_id lost_found_sys.grp PRIMARY KEY,
                                        group_name lost_found_sys.title NOT NULL,
-                                       center_name lost_found_sys.cntr_name DEFAULT NULL,
+                                       center_name lost_found_sys.cntr_name UNIQUE DEFAULT NULL,
                                        description lost_found_sys.describe NOT NULL,
                                        allow_add BOOLEAN DEFAULT true,
                                        allow_delete BOOLEAN DEFAULT true,
@@ -222,7 +222,7 @@ CREATE INDEX idx_pickups_byat ON lost_found_sys.pickups(picked_by, pickup_at);
 --- SET TABLES CONSTRAINTS
 --- =====================================
 ---
--- --- groups table
+--- groups table
 -- ALTER TABLE lost_found_sys.groups                                                                   ---
 --     ADD CONSTRAINT FK_groups FOREIGN KEY (center_name) REFERENCES lost_found_sys.centers            ---
 --         ON UPDATE CASCADE                                                                           ---
@@ -261,7 +261,7 @@ ALTER TABLE lost_found_sys.items                                                
 --- =====================================
 --- lost_found table
 ALTER TABLE lost_found_sys.lost_found                                                               ---
-    ADD CONSTRAINT PK_lost_found PRIMARY KEY (item_id, user_id),                                    ---
+--     ADD CONSTRAINT PK_lost_found PRIMARY KEY (item_id, user_id),                                    ---
     ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.users                   ---
         ON UPDATE NO ACTION                                                                         ---
         ON DELETE NO ACTION,                                                                    ---
@@ -368,9 +368,9 @@ BEGIN
     INSERT INTO lost_found_sys.pickups VALUES (pickupID, itemID);
     COMMIT;
     SAVEPOINT trans1;
-EXCEPTION
-    WHEN OTHERS THEN
-        ROLLBACK;
+    --         EXCEPTION
+--             WHEN OTHERS THEN
+--                 ROLLBACK;
 END;
 $BODY$ LANGUAGE plpgsql;
 ---
@@ -456,9 +456,9 @@ BEGIN
     WHERE
             id = ID;
     SAVEPOINT trans1;
-EXCEPTION
-    WHEN OTHERS THEN
-        ROLLBACK;
+    --             EXCEPTION
+--                 WHEN OTHERS THEN
+--                     ROLLBACK;
 END;
 $BODY$ LANGUAGE plpgsql;
 ---
@@ -481,7 +481,7 @@ call lost_found_sys.usp_pickups
     (
         uuid_generate_v4(),
         uuid_generate_v4(),
-        'Kaka',
+        'Kafka',
         'Library'
     );
 call lost_found_sys.usp_pickups
