@@ -83,7 +83,7 @@ CREATE DATABASE lost_found_sys;
 CREATE TABLE lost_found_sys.groups (
                                        group_id lost_found_sys.grp PRIMARY KEY,
                                        group_name lost_found_sys.title NOT NULL,
-                                       center_name lost_found_sys.cntr_name UNIQUE DEFAULT NULL,
+                                       center_name lost_found_sys.cntr_name DEFAULT NULL UNIQUE,
                                        description lost_found_sys.describe NOT NULL,
                                        allow_add BOOLEAN DEFAULT true,
                                        allow_delete BOOLEAN DEFAULT true,
@@ -94,8 +94,7 @@ CREATE TABLE lost_found_sys.groups (
 );
 --- =====================================
 CREATE TABLE lost_found_sys.centers (
-                                        center_id uuid PRIMARY KEY,
-                                        center_name lost_found_sys.cntr_name NOT NULL,
+                                        center_name lost_found_sys.cntr_name PRIMARY KEY NOT NULL,
                                         contacts TEXT [] NOT NULL,
                                         address lost_found_sys.addr NOT NULL,
                                         working_hours VARCHAR(20) NOT NULL
@@ -104,7 +103,7 @@ CREATE TABLE lost_found_sys.centers (
 CREATE TABLE lost_found_sys.users (
                                       user_id uuid PRIMARY KEY,
                                       group_id lost_found_sys.grp NOT NULL,
-                                      username VARCHAR(50) UNIQUE NOT NULL,
+                                      username VARCHAR(50) NOT NULL UNIQUE,
                                       password VARCHAR(512) NOT NULL,
                                       email VARCHAR(20),
                                       contact TEXT DEFAULT NULL
@@ -120,7 +119,7 @@ CREATE TABLE lost_found_sys.logs (
 --- =====================================
 CREATE TABLE lost_found_sys.categories (
                                            category_id uuid PRIMARY KEY,
-                                           category lost_found_sys.ctgry UNIQUE NOT NULL
+                                           category lost_found_sys.ctgry NOT NULL UNIQUE
 );
 --- =====================================
 CREATE TABLE lost_found_sys.posts (
@@ -157,7 +156,7 @@ CREATE TABLE lost_found_sys.imgs (
 CREATE TABLE lost_found_sys.pickups (
                                         id uuid PRIMARY KEY,
                                         item_id uuid NOT NULL,
-                                        center_id uuid DEFAULT NULL,
+                                        center_name lost_found_sys.cntr_name DEFAULT NULL UNIQUE,
                                         picked_by TEXT DEFAULT NULL,
                                         pickup_at lost_found_sys.addr DEFAULT NULL,
                                         time TIME DEFAULT NULL
@@ -173,8 +172,7 @@ CREATE INDEX idx_groups_id ON lost_found_sys.groups(group_id);
 CREATE INDEX idx_groups_id_name ON lost_found_sys.groups(group_id, group_name);
 ---
 --- indexes on centers table
-DROP INDEX IF EXISTS idx_centers_id, idx_centers_name;
-CREATE INDEX idx_centers_id ON lost_found_sys.centers(center_id);
+DROP INDEX IF EXISTS idx_centers_name;
 CREATE INDEX idx_centers_name ON lost_found_sys.centers(center_name);
 ---
 --- indexes on users table
@@ -213,7 +211,7 @@ CREATE INDEX idx_imgs_id ON lost_found_sys.imgs(item_id);
 --- indexes on pickups table
 DROP INDEX IF EXISTS idx_pickups_id, idx_pickups_ctid, idx_pickups_by, idx_pickups_at, idx_pickups_byat;
 CREATE INDEX idx_pickups_id ON lost_found_sys.pickups(item_id);
-CREATE INDEX idx_pickups_ctid ON lost_found_sys.pickups(center_id);
+CREATE INDEX idx_pickups_ctid ON lost_found_sys.pickups(center_name);
 CREATE INDEX idx_pickups_by ON lost_found_sys.pickups(picked_by);
 CREATE INDEX idx_pickups_at ON lost_found_sys.pickups(pickup_at);
 CREATE INDEX idx_pickups_byat ON lost_found_sys.pickups(picked_by, pickup_at);
@@ -223,10 +221,10 @@ CREATE INDEX idx_pickups_byat ON lost_found_sys.pickups(picked_by, pickup_at);
 --- =====================================
 ---
 --- groups table
--- ALTER TABLE lost_found_sys.groups                                                                   ---
---     ADD CONSTRAINT FK_groups FOREIGN KEY (center_name) REFERENCES lost_found_sys.centers            ---
---         ON UPDATE CASCADE                                                                           ---
---                   ON DELETE NO ACTION;                                                              ---
+ALTER TABLE lost_found_sys.groups                                                                   ---
+    ADD CONSTRAINT FK_groups FOREIGN KEY (center_name) REFERENCES lost_found_sys.centers            ---
+        ON UPDATE CASCADE                                                                           ---
+        ON DELETE NO ACTION;                                                              ---
 --- =====================================
 --- users table
 ALTER TABLE lost_found_sys.users                                                                    ---
@@ -262,7 +260,7 @@ ALTER TABLE lost_found_sys.items                                                
 --- lost_found table
 ALTER TABLE lost_found_sys.lost_found                                                               ---
 --     ADD CONSTRAINT PK_lost_found PRIMARY KEY (item_id, user_id),                                    ---
-    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.users                   ---
+    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.items                   ---
         ON UPDATE NO ACTION                                                                         ---
         ON DELETE NO ACTION,                                                                    ---
     ADD CONSTRAINT FK_users FOREIGN KEY (user_id) REFERENCES lost_found_sys.users                   ---
@@ -277,10 +275,10 @@ ALTER TABLE lost_found_sys.imgs                                                 
 --- =====================================
 --- pickups table
 ALTER TABLE lost_found_sys.pickups                                                                  ---
-    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.users                   ---
+    ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.items                   ---
         ON UPDATE NO ACTION                                                                         ---
         ON DELETE NO ACTION,                                                                    ---
-    ADD CONSTRAINT FK_centers FOREIGN KEY (center_id) REFERENCES lost_found_sys.centers             ---
+    ADD CONSTRAINT FK_centers FOREIGN KEY (center_name) REFERENCES lost_found_sys.centers             ---
         ON UPDATE NO ACTION                                                                         ---
         ON DELETE NO ACTION;                                                                    ---
 ---
@@ -288,23 +286,23 @@ ALTER TABLE lost_found_sys.pickups                                              
 --- INSERTING DATA TO TABLES
 --- =====================================
 ---
+--- insert into centers table
+INSERT INTO lost_found_sys.centers VALUES
+                                       ('ZHOU', ARRAY [ '(123)-234566], [(463)-056554]' ], 'North Campus', '8:20 AM to 4:40 PM'),
+                                       ('CAINIAO', ARRAY [ '(456)-234566], [(403)-259994]' ], 'South Campus', '8:20 AM to 4:40 PM'),
+                                       ('BOGR', ARRAY [ '(789)-234566], [(463)-457454]' ], 'Library', '8:20 AM to 4:40 PM'),
+                                       ('FAUNA', ARRAY [ '(101)-234566], [(663)-209854]' ], 'Card recharge Center', '8:20 AM to 4:40 PM'),
+                                       ('ARIES', ARRAY [ '(213)-234566], [(400)-557454]' ], 'Student Union', '8:20 AM to 4:40 PM'),
+                                       ('THEMOLD', ARRAY [ '(141)-234566], [(473)-159054]' ], 'A area', '8:20 AM to 4:40 PM'),
+                                       ('REDBLUESEED', ARRAY [ '(516)-234566], [(030)-859234]' ], 'B area', '8:20 AM to 4:40 PM'),
+                                       ('ARCHIPELAGO', ARRAY [ '(718)-234566], [(463)-650914]' ], 'C area', '8:20 AM to 4:40 PM'),
+                                       ('BABAVOSS', ARRAY [ '(192)-234566], [(963)-757454]' ], 'D area', '8:20 AM to 4:40 PM'),
+                                       ('WAVER', ARRAY [ '(212)-234566], [(773)-911454]' ], 'E area', '8:20 AM to 4:40 PM');
+---
 --- insert into groups table
 INSERT INTO lost_found_sys.groups VALUES ('grp_001@admin', 'admin', 'ARIES', 'manages the entire system', true, true);
 INSERT INTO lost_found_sys.groups VALUES ('grp_002@cent', 'center', 'ARCHIPELAGO', 'manages his center only');
 INSERT INTO lost_found_sys.groups VALUES ('grp_003@stu', 'student', NULL, 'can only post lost or found stuff');
----
---- insert into centers table
-INSERT INTO lost_found_sys.centers VALUES
-                                       (uuid_generate_v4(), 'ZHOU', ARRAY [ '(123)-234566], [(463)-056554]' ], 'North Campus', '8:20 AM to 4:40 PM'),
-                                       (uuid_generate_v4(), 'CAINIAO', ARRAY [ '(456)-234566], [(403)-259994]' ], 'South Campus', '8:20 AM to 4:40 PM'),
-                                       (uuid_generate_v4(), 'BOGR', ARRAY [ '(789)-234566], [(463)-457454]' ], 'Library', '8:20 AM to 4:40 PM'),
-                                       (uuid_generate_v4(), 'FAUNA', ARRAY [ '(101)-234566], [(663)-209854]' ], 'Card recharge Center', '8:20 AM to 4:40 PM'),
-                                       (uuid_generate_v4(), 'ARIES', ARRAY [ '(213)-234566], [(400)-557454]' ], 'Student Union', '8:20 AM to 4:40 PM'),
-                                       (uuid_generate_v4(), 'THEMOLD', ARRAY [ '(141)-234566], [(473)-159054]' ], 'A area', '8:20 AM to 4:40 PM'),
-                                       (uuid_generate_v4(), 'REDBLUESEED', ARRAY [ '(516)-234566], [(030)-859234]' ], 'B area', '8:20 AM to 4:40 PM'),
-                                       (uuid_generate_v4(), 'ARCHIPELAGO', ARRAY [ '(718)-234566], [(463)-650914]' ], 'C area', '8:20 AM to 4:40 PM'),
-                                       (uuid_generate_v4(), 'BABAVOSS', ARRAY [ '(192)-234566], [(963)-757454]' ], 'D area', '8:20 AM to 4:40 PM'),
-                                       (uuid_generate_v4(), 'WAVER', ARRAY [ '(212)-234566], [(773)-911454]' ], 'E area', '8:20 AM to 4:40 PM');
 ---
 --- insert into users table
 INSERT INTO lost_found_sys.users VALUES
@@ -366,11 +364,6 @@ BEGIN
     INSERT INTO lost_found_sys.lost_found VALUES (itemID, userID, usp_type_desc, usp_location);
     INSERT INTO lost_found_sys.imgs VALUES (imgID, itemID, usp_img_desc, usp_img);
     INSERT INTO lost_found_sys.pickups VALUES (pickupID, itemID);
-    COMMIT;
-    SAVEPOINT trans1;
-    --         EXCEPTION
---             WHEN OTHERS THEN
---                 ROLLBACK;
 END;
 $BODY$ LANGUAGE plpgsql;
 ---
@@ -434,13 +427,13 @@ call lost_found_sys.usp_posts
 ---
 --- usp_pickups procedure
 DROP PROCEDURE IF EXISTS lost_found_sys.usp_pickups;
-CREATE OR REPLACE PROCEDURE lost_found_sys.usp_pickups (itemID uuid, centerID uuid, pickedBY text, pickedAT lost_found_sys.addr)
+CREATE OR REPLACE PROCEDURE lost_found_sys.usp_pickups (itemID uuid, centerNAME lost_found_sys.cntr_name, pickedBY text, pickedAT lost_found_sys.addr)
 AS $BODY$
 DECLARE
-    ID uuid;
+    _ID uuid;
     pickedTIME time := LOCALTIME(0);
 BEGIN
-    SELECT id INTO STRICT ID
+    SELECT id INTO STRICT _ID
     FROM
         lost_found_sys.pickups
     WHERE
@@ -449,52 +442,48 @@ BEGIN
     UPDATE
         lost_found_sys.pickups
     SET
-        center_id = centerID,
+        center_name = centerNAME,
         picked_by = pickedBY,
         pickup_at = pickedAT,
         time = pickedTIME
     WHERE
-            id = ID;
-    SAVEPOINT trans1;
-    --             EXCEPTION
---                 WHEN OTHERS THEN
---                     ROLLBACK;
+            id = _ID;
 END;
 $BODY$ LANGUAGE plpgsql;
 ---
 ---
 call lost_found_sys.usp_pickups
     (
-        uuid_generate_v4(),
-        uuid_generate_v4(),
+        '7d14c666-0f21-439f-bd65-e999613ea3aa',
+        'ZHOU',
         'Michael',
         'North Campus'
     );
 call lost_found_sys.usp_pickups
     (
-        uuid_generate_v4(),
-        uuid_generate_v4(),
+        'f7e8650a-2d44-42b7-b1fa-77536ec8c4df',
+        'CAINIAO',
         'Bjorn',
         'South Campus'
     );
 call lost_found_sys.usp_pickups
     (
-        uuid_generate_v4(),
-        uuid_generate_v4(),
+        '26762f81-98b7-462f-b9be-e1fe56e00382',
+        'REDBLUESEED',
         'Kafka',
         'Library'
     );
 call lost_found_sys.usp_pickups
     (
-        uuid_generate_v4(),
-        uuid_generate_v4(),
+        'd2e0cbc0-630e-42ec-a638-80b2a683bfcc',
+        'BABAVOSS',
         'Florence',
         'Card recharge Center'
     );
 call lost_found_sys.usp_pickups
     (
-        uuid_generate_v4(),
-        uuid_generate_v4(),
+        '2e868fe7-5816-454d-b16a-b8784111d4ab',
+        'FAUNA',
         'badriri',
         'Student Union'
     );
@@ -504,11 +493,11 @@ DROP FUNCTION IF EXISTS center_schema.usp_goods;
 CREATE OR REPLACE FUNCTION center_schema.usp_goods ()
     RETURNS text AS $BODY$
 DECLARE
-    centers TEXT [];
-    center VARCHAR := 'student';
-    student VARCHAR := 'student';
-    name VARCHAR;
-    result text[];
+    centers text [];
+    center varchar = 'center';
+    student varchar := 'student';
+    name varchar;
+    result text [];
 BEGIN
     SELECT INTO centers (ARRAY ['North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area']);
     <<loop_in>>
