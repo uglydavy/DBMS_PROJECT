@@ -36,7 +36,7 @@ DROP TABLE IF EXISTS lost_found_sys.categories CASCADE; --- Delete table categor
 DROP TABLE IF EXISTS lost_found_sys.imgs CASCADE;       --- Delete table imgs from lost_found_sys if it already exists
 DROP TABLE IF EXISTS lost_found_sys.pickups CASCADE;    --- Delete table pickups from lost_found_sys if it already exists
 DROP DATABASE IF EXISTS lost_found_sys;                 --- Delete database lost_found_sys if it already exists
-DROP USER IF EXISTS sys_admin, north_center, south_center, south_center, recharge_center, student_center, a_center, b_center, c_center, d_center, e_center;
+DROP USER IF EXISTS sys_admin, north_center, south_center, library_center, recharge_center, student_center, a_center, b_center, c_center, d_center, e_center;
 DROP ROLE IF EXISTS center_admin;
 ---
 --- =====================================
@@ -58,7 +58,7 @@ DROP TYPE IF EXISTS
     lost_found_sys.ctgry,
     lost_found_sys.describe,
     lost_found_sys.addr,
-    lost_found_sys.i_type;
+    lost_found_sys.i_type CASCADE;
 
 CREATE TYPE lost_found_sys.grp AS ENUM ('grp_001@admin', 'grp_002@cent', 'grp_003@stu');                                                                                           --- Group's ID
 CREATE TYPE lost_found_sys.cntr AS ENUM ('001@north', '002@south', '003@lib', '004@card', '005@union', '006@A', '007@B', '008@C', '009@D', '010@E');                               --- Center's ID
@@ -126,7 +126,7 @@ CREATE TABLE lost_found_sys.posts (
                                       post_id uuid PRIMARY KEY,
                                       user_id uuid NOT NULL,
                                       category_id uuid NOT NULL,
-                                      title VARCHAR(30) DEFAULT NULL,
+                                      title varchar(30) DEFAULT NULL,
                                       description VARCHAR(512) NOT NULL,
                                       category lost_found_sys.ctgry NOT NULL,
                                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -259,7 +259,6 @@ ALTER TABLE lost_found_sys.items                                                
 --- =====================================
 --- lost_found table
 ALTER TABLE lost_found_sys.lost_found                                                               ---
---     ADD CONSTRAINT PK_lost_found PRIMARY KEY (item_id, user_id),                                    ---
     ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.items                   ---
         ON UPDATE NO ACTION                                                                         ---
         ON DELETE NO ACTION,                                                                    ---
@@ -278,7 +277,7 @@ ALTER TABLE lost_found_sys.pickups                                              
     ADD CONSTRAINT FK_items FOREIGN KEY (item_id) REFERENCES lost_found_sys.items                   ---
         ON UPDATE NO ACTION                                                                         ---
         ON DELETE NO ACTION,                                                                    ---
-    ADD CONSTRAINT FK_centers FOREIGN KEY (center_name) REFERENCES lost_found_sys.centers             ---
+    ADD CONSTRAINT FK_centers FOREIGN KEY (center_name) REFERENCES lost_found_sys.centers           ---
         ON UPDATE NO ACTION                                                                         ---
         ON DELETE NO ACTION;                                                                    ---
 ---
@@ -329,7 +328,7 @@ INSERT INTO lost_found_sys.categories VALUES
 DROP PROCEDURE IF EXISTS lost_found_sys.usp_posts;
 CREATE OR REPLACE PROCEDURE lost_found_sys.usp_posts
 (
-    usp_username varchar,                        ---
+    usp_username varchar,                       ---
     usp_title varchar,                          --- Declaring variable usp_title representing (posts.title) with default value null
     usp_desc varchar,                           --- Declaring variable usp_description representing (posts.description)
     usp_category lost_found_sys.ctgry,          --- Declaring variable representing posts.category
@@ -454,91 +453,100 @@ $BODY$ LANGUAGE plpgsql;
 ---
 call lost_found_sys.usp_pickups
     (
-        '7d14c666-0f21-439f-bd65-e999613ea3aa',
+        '742ca27d-710c-4026-968e-c20dbd2327ae',
         'ZHOU',
         'Michael',
         'North Campus'
     );
 call lost_found_sys.usp_pickups
     (
-        'f7e8650a-2d44-42b7-b1fa-77536ec8c4df',
+        'd339ada4-1401-494d-b2b7-37debda7738c',
         'CAINIAO',
         'Bjorn',
         'South Campus'
     );
 call lost_found_sys.usp_pickups
     (
-        '26762f81-98b7-462f-b9be-e1fe56e00382',
+        '8955aacb-81c5-477f-a1a4-3e5e81dfbb1f',
         'REDBLUESEED',
         'Kafka',
         'Library'
     );
 call lost_found_sys.usp_pickups
     (
-        'd2e0cbc0-630e-42ec-a638-80b2a683bfcc',
+        'cf8d044d-d1e8-4cc2-b0ec-519b86cac5cf',
         'BABAVOSS',
         'Florence',
         'Card recharge Center'
     );
 call lost_found_sys.usp_pickups
     (
-        '2e868fe7-5816-454d-b16a-b8784111d4ab',
+        '9e8b43d0-e4df-410a-8316-cbf6a93e698b',
         'FAUNA',
         'badriri',
         'Student Union'
     );
 ---
 --- usp_goods procedure
-DROP FUNCTION IF EXISTS center_schema.usp_goods;
-CREATE OR REPLACE FUNCTION center_schema.usp_goods ()
-    RETURNS text AS $BODY$
+DROP FUNCTION IF EXISTS lost_found_sys.usp_goods();
+CREATE OR REPLACE FUNCTION lost_found_sys.usp_goods ()
+    RETURNS TABLE (
+                      user_id uuid,
+                      item_id uuid,
+                      username varchar,
+                      post varchar,
+                      body varchar,
+                      category lost_found_sys.ctgry,
+                      img bytea,
+                      contact text,
+                      status numeric,
+                      created_at timestamp
+                  )
+AS $BODY$
 DECLARE
-    centers text [];
-    center varchar = 'center';
-    student varchar := 'student';
-    name varchar;
-    result text [];
+    centers text [] := ARRAY ['ZHOU', 'CAINIAO', 'BOGR', 'FAUNA', 'ARIES', 'THEMOLD', 'REDBLUESEED', 'ARCHIPELAGO', 'BABAVOSS', 'WAVER'];
+    center lost_found_sys.title := 'center';
+    student lost_found_sys.title := 'student';
+    name lost_found_sys.cntr_name;
 BEGIN
-    SELECT INTO centers (ARRAY ['North Campus', 'South Campus', 'Library', 'Card recharge Center', 'Student Union', 'A area', 'B area', 'C area', 'D area', 'E area']);
     <<loop_in>>
     FOREACH name IN ARRAY centers LOOP
-            SELECT
-                u.user_id AS user_id,                --- Rename column "u.user_id" as "user_id"
-                it.item_id AS item_id,               --- Rename column "i.item_id" as "item_id"
-                u.username AS username,              --- Rename column "u.username" as "username"
-                p.title AS post,                     --- Rename column "p.title" as "post"
-                p.description AS body,               --- Rename column "p.description" as "body"
-                c.category AS category,              --- Rename column "c.category" as "category"
-                im.img AS img,                       --- Rename column "im.img" as "img"
-                u.contact AS contact,                --- Rename column "u.contact" as "contact"
-                it.status AS status,                 --- Rename column "it.status" as "status"
-                p.created_at AS created_at           --- Rename column "p.created_at" as "created_at"
-            INTO
-                result
-            FROM
-                lost_found_sys.posts p,              --- Rename table as "p"
-                lost_found_sys.items it,             --- Rename table items as "it"
-                lost_found_sys.users u,              --- Rename table users as "u"
-                lost_found_sys.imgs im,              --- Rename table imgs as "im"
-                lost_found_sys.categories c,         --- Rename table categories as "c"
-                lost_found_sys.groups g              --- Rename table groups as "g"
-            WHERE
-                        c.category_id = p.category_id       --- Joining category and posts tables by "category_id"
-                    AND
-                        p.user_id = u.user_id               --- Joining posts and users tables by "user_id"
-                    AND
-                        u.user_id = it.user_id              --- Joining users and items tables by "user_id"
-                    AND
-                        it.item_id = im.item_id             --- Joining items and images tables by "item_id"
-                    AND
-                        g.group_name = center               --- Display info from user of group center
-               OR
-                        g.group_name = student              --- Display info from user of group student
-                    AND
-                        g.center_name = name                --- Displaying relevant info based on center's location
-            ORDER BY
-                p.created_at;
-            RETURN result;
+            RETURN QUERY
+                SELECT
+                    u.user_id,                           --- Rename column "u.user_id" as "user_id"
+                    it.item_id,                          --- Rename column "it.item_id" as "item_id"
+                    u.username,                          --- Rename column "u.username" as "username"
+                    p.title,                             --- Rename column "p.title" as "post"
+                    p.description,                       --- Rename column "p.description" as "body"
+                    c.category,                          --- Rename column "c.category" as "category"
+                    im.img,                              --- Rename column "im.img" as "img"
+                    u.contact,                           --- Rename column "u.contact" as "contact"
+                    it.status,                           --- Rename column "it.status" as "status"
+                    p.created_at                         --- Rename column "p.created_at" as "created_at"
+                FROM
+                    lost_found_sys.posts p,              --- Rename table as "p"
+                    lost_found_sys.items it,             --- Rename table items as "it"
+                    lost_found_sys.users u,              --- Rename table users as "u"
+                    lost_found_sys.imgs im,              --- Rename table imgs as "im"
+                    lost_found_sys.categories c,         --- Rename table categories as "c"
+                    lost_found_sys.groups g              --- Rename table groups as "g"
+                WHERE
+                            c.category_id = p.category_id       --- Joining category and posts tables by "category_id"
+                        AND
+                            p.user_id = u.user_id               --- Joining posts and users tables by "user_id"
+                        AND
+                            u.user_id = it.user_id              --- Joining users and items tables by "user_id"
+                        AND
+                            it.item_id = im.item_id             --- Joining items and images tables by "item_id"
+                        AND
+                            g.group_name = center               --- Display info from user of group center
+                   OR
+                            g.group_name = student              --- Display info from user of group student
+                        AND
+                            g.center_name = name                --- Displaying relevant info based on center's location
+                ORDER BY
+                    p.created_at;
+            RETURN NEXT;
         END LOOP loop_in;
 END;
 $BODY$ LANGUAGE plpgsql;
@@ -550,9 +558,9 @@ $BODY$ LANGUAGE plpgsql;
 ---
 --- lost_found_goods view
 DROP VIEW IF EXISTS center_schema.lost_found_goods;
-CREATE OR REPLACE VIEW center_schema.lost_found_goods           --- Create view lost_found_goods under "center_schema"
+CREATE OR REPLACE VIEW center_schema.lost_found_goods  --- Create view lost_found_goods under "center_schema"
 AS
-select * from center_schema.usp_goods() AS usp_goods;    --- Selecting data by calling procedure "center_schema.usp_goods()" as "usp_goods"
+select * from lost_found_sys.usp_goods();       --- Selecting data by calling procedure "center_schema.usp_goods()" as "usp_goods"
 ---
 ---
 --- =====================================
