@@ -14,16 +14,16 @@
 --- SETTING UP DATABASE AND TABLES
 --- =====================================
 ---
-TRUNCATE TABLE lost_found_sys.users CASCADE;
-TRUNCATE TABLE lost_found_sys.groups CASCADE;
-TRUNCATE TABLE lost_found_sys.logs CASCADE;
-TRUNCATE TABLE lost_found_sys.centers CASCADE;
-TRUNCATE TABLE lost_found_sys.posts CASCADE;
-TRUNCATE TABLE lost_found_sys.items CASCADE;
-TRUNCATE TABLE lost_found_sys.lost_found CASCADE;
-TRUNCATE TABLE lost_found_sys.categories CASCADE;
-TRUNCATE TABLE lost_found_sys.imgs CASCADE;
-TRUNCATE TABLE lost_found_sys.pickups CASCADE;
+-- TRUNCATE TABLE lost_found_sys.users CASCADE;
+-- TRUNCATE TABLE lost_found_sys.groups CASCADE;
+-- TRUNCATE TABLE lost_found_sys.logs CASCADE;
+-- TRUNCATE TABLE lost_found_sys.centers CASCADE;
+-- TRUNCATE TABLE lost_found_sys.posts CASCADE;
+-- TRUNCATE TABLE lost_found_sys.items CASCADE;
+-- TRUNCATE TABLE lost_found_sys.lost_found CASCADE;
+-- TRUNCATE TABLE lost_found_sys.categories CASCADE;
+-- TRUNCATE TABLE lost_found_sys.imgs CASCADE;
+-- TRUNCATE TABLE lost_found_sys.pickups CASCADE;
 ---
 DROP TABLE IF EXISTS lost_found_sys.users CASCADE;      --- Delete table users from lost_found_sys if it already exists
 DROP TABLE IF EXISTS lost_found_sys.groups CASCADE;     --- Delete table groups from lost_found_sys if it already exists
@@ -305,6 +305,7 @@ INSERT INTO lost_found_sys.groups VALUES ('grp_003@stu', 'student', NULL, 'can o
 ---
 --- insert into users table
 INSERT INTO lost_found_sys.users VALUES
+                                     (uuid_generate_v4(), 'grp_001@admin', 'zero', 'password0', 'zero@mail.com', '(000)-00000000'),
                                      (uuid_generate_v4(), 'grp_003@stu', 'uglydavy', 'password1', 'uglydavy@mail.com', '(245)-65734523'),
                                      (uuid_generate_v4(), 'grp_002@cent', 'daniel', 'password2', 'daniel@mail.com', '(185)-65723777'),
                                      (uuid_generate_v4(), 'grp_002@cent', 'mike', 'password3', 'mike@mail.com', '(897)-61109823'),
@@ -447,41 +448,48 @@ BEGIN
         time = pickedTIME
     WHERE
             id = _ID;
+
+    UPDATE
+        lost_found_sys.items
+    SET
+        status = 1
+    WHERE
+            item_id = itemID;
 END;
 $BODY$ LANGUAGE plpgsql;
 ---
 ---
 call lost_found_sys.usp_pickups
     (
-        '742ca27d-710c-4026-968e-c20dbd2327ae',
+        '6b41df94-0e1e-4c9e-a8a2-fd4c9acf2b55',
         'ZHOU',
         'Michael',
         'North Campus'
     );
 call lost_found_sys.usp_pickups
     (
-        'd339ada4-1401-494d-b2b7-37debda7738c',
+        'e577c651-17b2-4951-9a1b-b1648e2fc55e',
         'CAINIAO',
         'Bjorn',
         'South Campus'
     );
 call lost_found_sys.usp_pickups
     (
-        '8955aacb-81c5-477f-a1a4-3e5e81dfbb1f',
+        'cbfbdb6b-c153-440e-9d1e-60cf220827fd',
         'REDBLUESEED',
         'Kafka',
         'Library'
     );
 call lost_found_sys.usp_pickups
     (
-        'cf8d044d-d1e8-4cc2-b0ec-519b86cac5cf',
+        '173ec8ca-db52-4632-8dad-a11bebc220e7',
         'BABAVOSS',
         'Florence',
         'Card recharge Center'
     );
 call lost_found_sys.usp_pickups
     (
-        '9e8b43d0-e4df-410a-8316-cbf6a93e698b',
+        'e9cf72a0-2c72-409f-b70a-011c46f19adc',
         'FAUNA',
         'badriri',
         'Student Union'
@@ -505,8 +513,6 @@ CREATE OR REPLACE FUNCTION lost_found_sys.usp_goods ()
 AS $BODY$
 DECLARE
     centers text [] := ARRAY ['ZHOU', 'CAINIAO', 'BOGR', 'FAUNA', 'ARIES', 'THEMOLD', 'REDBLUESEED', 'ARCHIPELAGO', 'BABAVOSS', 'WAVER'];
-    center lost_found_sys.title := 'center';
-    student lost_found_sys.title := 'student';
     name lost_found_sys.cntr_name;
 BEGIN
     <<loop_in>>
@@ -529,21 +535,22 @@ BEGIN
                     lost_found_sys.users u,              --- Rename table users as "u"
                     lost_found_sys.imgs im,              --- Rename table imgs as "im"
                     lost_found_sys.categories c,         --- Rename table categories as "c"
-                    lost_found_sys.groups g              --- Rename table groups as "g"
+                    lost_found_sys.groups g,             --- Rename table groups as "g"
+                    lost_found_sys.centers ct            --- Rename table centers as "ct"
                 WHERE
-                            c.category_id = p.category_id       --- Joining category and posts tables by "category_id"
-                        AND
-                            p.user_id = u.user_id               --- Joining posts and users tables by "user_id"
-                        AND
-                            u.user_id = it.user_id              --- Joining users and items tables by "user_id"
-                        AND
-                            it.item_id = im.item_id             --- Joining items and images tables by "item_id"
-                        AND
-                            g.group_name = center               --- Display info from user of group center
-                   OR
-                            g.group_name = student              --- Display info from user of group student
-                        AND
-                            g.center_name = name                --- Displaying relevant info based on center's location
+                        c.category_id = p.category_id       --- Joining category and posts tables by "category_id"
+                  AND
+                        p.user_id = u.user_id               --- Joining posts and users tables by "user_id"
+                  AND
+                        u.user_id = it.user_id              --- Joining users and items tables by "user_id"
+                  AND
+                        it.item_id = im.item_id             --- Joining items and images tables by "item_id"
+                  AND
+                        ct.center_name = g.center_name      --- Joining centers and groups tables by "center_name"
+                  AND
+                        u.group_id != 'grp_001@admin'       --- Exclude any data related to system administrator
+                  AND
+                        g.center_name = name                --- Displaying relevant info based on center's location
                 ORDER BY
                     p.created_at;
             RETURN NEXT;
@@ -568,8 +575,8 @@ select * from lost_found_sys.usp_goods();       --- Selecting data by calling pr
 --- =====================================
 ---
 --- revoking access
--- REVOKE ALL ON DATABASE lost_found_sys FROM PUBLIC;                          --- revoke access & grants from public to users
--- REVOKE ALL ON SCHEMA public FROM PUBLIC;                                    --- revoke access & grants to public
+REVOKE ALL ON DATABASE lost_found_sys FROM PUBLIC;                          --- revoke access & grants from public to users
+REVOKE ALL ON SCHEMA public FROM PUBLIC;                                    --- revoke access & grants to public
 -- REVOKE ALL ON SCHEMA center_schema FROM center_admin;
 -- REVOKE ALL ON DATABASE lost_found_sys FROM center_admin;
 -- REVOKE CONNECT ON DATABASE lost_found_sys FROM center_admin;
